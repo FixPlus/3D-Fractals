@@ -1,0 +1,81 @@
+main.o: code/main.cpp code/drawer.h code/VulkanExample.h \
+ external/vulkan/vulkan.h external/vulkan/vk_platform.h \
+ external/vulkan/vulkan_core.h base/vulkanexamplebase.h \
+ base/ShellScalingAPI.h base/keycodes.hpp base/VulkanTools.h \
+ base/VulkanInitializers.hpp base/VulkanDebug.h base/VulkanUIOverlay.h \
+ base/VulkanBuffer.hpp base/VulkanDevice.hpp \
+ base/../external/imgui/imgui.h base/../external/imgui/imconfig.h \
+ base/VulkanSwapChain.hpp base/camera.hpp base/benchmark.hpp \
+ base/UserInputMessage.h base/VulkanTexture.hpp base/VulkanModel.hpp \
+ external/assimp/Importer.hpp external/assimp/types.h \
+ external/assimp/defs.h external/assimp/vector3.h \
+ external/assimp/./Compiler/pushpack1.h \
+ external/assimp/./Compiler/poppack1.h external/assimp/vector2.h \
+ external/assimp/color4.h external/assimp/matrix3x3.h \
+ external/assimp/matrix4x4.h external/assimp/quaternion.h \
+ external/assimp/vector2.inl external/assimp/vector3.inl \
+ external/assimp/color4.inl external/assimp/quaternion.inl \
+ external/assimp/matrix3x3.inl external/assimp/matrix4x4.inl \
+ external/assimp/config.h external/assimp/scene.h \
+ external/assimp/texture.h external/assimp/mesh.h external/assimp/light.h \
+ external/assimp/camera.h external/assimp/material.h \
+ external/assimp/material.inl external/assimp/anim.h \
+ external/assimp/metadata.h external/assimp/postprocess.h \
+ external/assimp/cimport.h code/MazeUI.h
+VulkanExample.o: code/VulkanExample.cpp code/VulkanExample.h \
+ external/vulkan/vulkan.h external/vulkan/vk_platform.h \
+ external/vulkan/vulkan_core.h base/vulkanexamplebase.h \
+ base/ShellScalingAPI.h base/keycodes.hpp base/VulkanTools.h \
+ base/VulkanInitializers.hpp base/VulkanDebug.h base/VulkanUIOverlay.h \
+ base/VulkanBuffer.hpp base/VulkanDevice.hpp \
+ base/../external/imgui/imgui.h base/../external/imgui/imconfig.h \
+ base/VulkanSwapChain.hpp base/camera.hpp base/benchmark.hpp \
+ base/UserInputMessage.h base/VulkanTexture.hpp base/VulkanModel.hpp \
+ external/assimp/Importer.hpp external/assimp/types.h \
+ external/assimp/defs.h external/assimp/vector3.h \
+ external/assimp/./Compiler/pushpack1.h \
+ external/assimp/./Compiler/poppack1.h external/assimp/vector2.h \
+ external/assimp/color4.h external/assimp/matrix3x3.h \
+ external/assimp/matrix4x4.h external/assimp/quaternion.h \
+ external/assimp/vector2.inl external/assimp/vector3.inl \
+ external/assimp/color4.inl external/assimp/quaternion.inl \
+ external/assimp/matrix3x3.inl external/assimp/matrix4x4.inl \
+ external/assimp/config.h external/assimp/scene.h \
+ external/assimp/texture.h external/assimp/mesh.h external/assimp/light.h \
+ external/assimp/camera.h external/assimp/material.h \
+ external/assimp/material.inl external/assimp/anim.h \
+ external/assimp/metadata.h external/assimp/postprocess.h \
+ external/assimp/cimport.h
+drawer.o: code/drawer.cpp code/drawer.h code/VulkanExample.h \
+ external/vulkan/vulkan.h external/vulkan/vk_platform.h \
+ external/vulkan/vulkan_core.h base/vulkanexamplebase.h \
+ base/ShellScalingAPI.h base/keycodes.hpp base/VulkanTools.h \
+ base/VulkanInitializers.hpp base/VulkanDebug.h base/VulkanUIOverlay.h \
+ base/VulkanBuffer.hpp base/VulkanDevice.hpp \
+ base/../external/imgui/imgui.h base/../external/imgui/imconfig.h \
+ base/VulkanSwapChain.hpp base/camera.hpp base/benchmark.hpp \
+ base/UserInputMessage.h base/VulkanTexture.hpp base/VulkanModel.hpp \
+ external/assimp/Importer.hpp external/assimp/types.h \
+ external/assimp/defs.h external/assimp/vector3.h \
+ external/assimp/./Compiler/pushpack1.h \
+ external/assimp/./Compiler/poppack1.h external/assimp/vector2.h \
+ external/assimp/color4.h external/assimp/matrix3x3.h \
+ external/assimp/matrix4x4.h external/assimp/quaternion.h \
+ external/assimp/vector2.inl external/assimp/vector3.inl \
+ external/assimp/color4.inl external/assimp/quaternion.inl \
+ external/assimp/matrix3x3.inl external/assimp/matrix4x4.inl \
+ external/assimp/config.h external/assimp/scene.h \
+ external/assimp/texture.h external/assimp/mesh.h external/assimp/light.h \
+ external/assimp/camera.h external/assimp/material.h \
+ external/assimp/material.inl external/assimp/anim.h \
+ external/assimp/metadata.h external/assimp/postprocess.h \
+ external/assimp/cimport.h
+vulkanexamplebase.o: base/vulkanexamplebase.cpp base/vulkanexamplebase.h \
+ base/ShellScalingAPI.h external/vulkan/vulkan.h \
+ external/vulkan/vk_platform.h external/vulkan/vulkan_core.h \
+ base/keycodes.hpp base/VulkanTools.h base/VulkanInitializers.hpp \
+ base/VulkanDebug.h base/VulkanUIOverlay.h base/VulkanBuffer.hpp \
+ base/VulkanDevice.hpp base/../external/imgui/imgui.h \
+ base/../external/imgui/imconfig.h base/VulkanSwapChain.hpp \
+ base/camera.hpp base/benchmark.hpp base/UserInputMessage.h \
+ base/../code/MazeUI.h
