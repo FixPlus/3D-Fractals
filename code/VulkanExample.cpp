@@ -34,6 +34,10 @@ void VulkanExample::mouseMoved(double x, double y, bool &handled){
 //	std::cout << "x: " << cameraPos.x << " y:" << cameraPos.y << "z: " << cameraPos.z << std::endl;
 }
 
+void VulkanExample::moveCameraInDir(glm::vec4 shift){
+	cameraPos += glm::vec3(shift.x, shift.y, shift.z);
+}
+
 void VulkanExample::tiltCamera(float angle){
 
 //	rotation.z += angle * 4.0f;

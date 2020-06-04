@@ -23,11 +23,24 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 
 bool movingFwd = false, movingBwd = false, movingRgt = false, movingLft = false, tiltRgt = false, tiltLft = false;
 bool super_sonic_boom = false, lightRot = false;
-
+bool sliding = false;
 
 float epsilon = 0.01f;
-float spoungeUnit = 1.0f;
+float spoungeUnit = 10.0f;
 float collisionRadius = 0.3f;
+
+
+bool mirrorFlag = false;
+
+glm::vec4 planeMirrorForced(glm::vec4 point, glm::vec4 planeRoot, glm::vec4 planeNormal){
+	planeNormal = glm::normalize(planeNormal);
+
+	glm::vec4 div = point - planeRoot;
+	float normProj = glm::dot(planeNormal, div);
+	point -= 2.0f * planeNormal *  normProj;
+
+	return point;
+}
 
 glm::vec4 planeMirror(glm::vec4 point, glm::vec4 planeRoot, glm::vec4 planeNormal){
 	planeNormal = glm::normalize(planeNormal);
@@ -36,7 +49,10 @@ glm::vec4 planeMirror(glm::vec4 point, glm::vec4 planeRoot, glm::vec4 planeNorma
 	float normProj = glm::dot(planeNormal, div);
 	if(normProj < 0.0f){
 		point -= 2.0f * planeNormal *  normProj;
+		mirrorFlag = true;
 	}
+	else
+		mirrorFlag = false;
 
 	return point;
 }
@@ -46,7 +62,7 @@ float closestDist(glm::vec4 pos){
 	float rank = 6;
 	for(int i = 0; i < rank; i++){
 		float curRank = rank - i;
-		float multiplier = glm::pow(3, curRank - 1);
+		float multiplier = glm::pow(3, curRank - 1) * spoungeUnit;
 		pos = planeMirror(pos, glm::vec4(0.0f, 0.0f, 3.0f * multiplier, 0.0f), glm::vec4(-1.0f, 0.0f, -1.0f, 0.0f));
 		pos = planeMirror(pos, glm::vec4(0.0f, 0.0f, 0.0f, 0.0f), glm::vec4(1.0f, 0.0f, -1.0f, 0.0f));
 		pos = planeMirror(pos, glm::vec4(1.5f * multiplier, 0.0f, 0.0f, 0.0f), glm::vec4(-1.0f, 0.0f, 0.0f, 0.0f));
@@ -65,14 +81,83 @@ float closestDist(glm::vec4 pos){
 
 }
 
+glm::vec4 closestNormal(glm::vec4 pos){
 
-float howMuchCanGo(glm::vec4 dir, glm::vec4 origin, float maxLen){
+	float rank = 6;
+	std::list<glm::vec4> transforms;
+	for(int i = 0; i < rank; i++){
+		float curRank = rank - i;
+		float multiplier = glm::pow(3, curRank - 1) * spoungeUnit;
+		
+		pos = planeMirror(pos, glm::vec4(0.0f, 0.0f, 3.0f * multiplier, 0.0f), glm::vec4(-1.0f, 0.0f, -1.0f, 0.0f));
+		if(mirrorFlag)
+			transforms.push_back(glm::vec4(-1.0f, 0.0f, -1.0f, 0.0f));
+		
+		pos = planeMirror(pos, glm::vec4(0.0f, 0.0f, 0.0f, 0.0f), glm::vec4(1.0f, 0.0f, -1.0f, 0.0f));
+		if(mirrorFlag)
+			transforms.push_back(glm::vec4(1.0f, 0.0f, -1.0f, 0.0f));
+		
+		pos = planeMirror(pos, glm::vec4(1.5f * multiplier, 0.0f, 0.0f, 0.0f), glm::vec4(-1.0f, 0.0f, 0.0f, 0.0f));
+		if(mirrorFlag)
+			transforms.push_back(glm::vec4(-1.0f, 0.0f, 0.0f, 0.0f));
+		
+		pos = planeMirror(pos, glm::vec4(0.0f, 1.5f * multiplier, 0.0f, 0.0f), glm::vec4(0.0f, -1.0f, 0.0f, 0.0f));
+		if(mirrorFlag)
+			transforms.push_back(glm::vec4(0.0f, -1.0f, 0.0f, 0.0f));
+		
+		pos = planeMirror(pos, glm::vec4(2.0f * multiplier, 1.0f * multiplier, 0.0f, 0.0f), glm::vec4(-1.0f, -1.0f, 0.0f, 0.0f));
+		if(mirrorFlag)
+			transforms.push_back(glm::vec4(-1.0f, -1.0f, 0.0f, 0.0f));
+		
+		pos = planeMirror(pos, glm::vec4(0.0f, 0.0f, 0.0f, 0.0f), glm::vec4(1.0f, -1.0f, 0.0f, 0.0f));
+		if(mirrorFlag)
+			transforms.push_back(glm::vec4(1.0f, -1.0f, 0.0f, 0.0f));
+		
+		pos = planeMirror(pos, glm::vec4(1.0f * multiplier, 0.0f, 0.0f, 0.0f), glm::vec4(-1.0f, 0.0f, 0.0f, 0.0f));
+		if(mirrorFlag)
+			transforms.push_back(glm::vec4(-1.0f, 0.0f, 0.0f, 0.0f));
+	}
+
+	float x = pos.x / spoungeUnit - 0.5f;
+	float y = pos.y / spoungeUnit - 0.5f;
+	float z = pos.z / spoungeUnit - 0.5f;
+	
+	glm::vec4 ret;
+	
+	if(abs(x) >= glm::abs(y) && glm::abs(x) >= glm::abs(z) ){
+		ret = glm::vec4(x > 0.0f ? 1.0f : -1.0f, 0.0f, 0.0f, 0.0f);
+	}
+	else
+		if(abs(y) >= abs(z)){
+			ret = glm::vec4(0.0f, y > 0.0f ? 1.0f : -1.0f, 0.0f, 0.0f);
+
+		}
+		else{
+			ret = glm::vec4(0.0f, 0.0f, z > 0.0f ? 1.0f : -1.0f, 0.0f);
+
+		}
+
+
+	while(!transforms.empty()){
+		glm::vec4 planeNorm = transforms.back();
+		transforms.pop_back();
+		ret = planeMirrorForced(ret, glm::vec4(0.0f, 0.0f, 0.0f, 0.0f), -planeNorm);
+	}
+
+	ret = glm::normalize(ret);
+	return ret;
+}
+
+glm::vec4 howMuchCanGo(glm::vec4 dir, glm::vec4 origin, float maxLen){
 	int n = 0; //count of steps
 	float totalRayLength = 0.0f; // pixel ray length
 	glm::vec4 curPos = origin;
+	
+	sliding = false;
 
 	float temp;
 	if((temp = closestDist(curPos)) - collisionRadius < epsilon){
+		glm::vec4 prevPos = curPos;
 		curPos += dir * epsilon * 0.99f;
 		n++;
 		totalRayLength += epsilon;
@@ -84,10 +169,31 @@ float howMuchCanGo(glm::vec4 dir, glm::vec4 origin, float maxLen){
 				totalRayLength += temp;
 			}
 			if(temp == 0.0f || totalRayLength > maxLen)
-				return glm::min(totalRayLength, maxLen);
+				return glm::normalize(dir) * glm::min(totalRayLength, maxLen);
 		}
 		else{
-			return 0.0f;
+			curPos = prevPos;
+			n = 0;
+			totalRayLength = 0.0f;
+			glm::vec4 norm = glm::normalize(closestNormal(curPos));
+			glm::vec4 newDir = dir -  norm * glm::dot(norm, dir);
+
+			if(length(newDir) != 0.0f){
+				newDir = normalize(newDir);
+			
+				maxLen *= glm::dot(glm::normalize(dir), newDir) * 0.4f;  
+				float prevTemp = temp;
+				while((temp = closestDist(curPos)) - collisionRadius >= epsilon * 0.25f && totalRayLength < maxLen && temp != 0.0f && n < 500){
+					curPos += newDir * temp * 0.99f;
+					n++;
+					totalRayLength += temp * 0.99f;
+				}
+				sliding = true;
+			
+				return newDir * glm::min(totalRayLength, maxLen);
+			}
+			else
+				return dir * 0.0f;
 		}	
 	}
 
@@ -97,7 +203,7 @@ float howMuchCanGo(glm::vec4 dir, glm::vec4 origin, float maxLen){
 		totalRayLength += (temp - collisionRadius);
 	}
 
-	return glm::min(totalRayLength, maxLen);
+	return glm::normalize(dir) * glm::min(totalRayLength, maxLen);
 }
 
 
@@ -223,9 +329,16 @@ int APIENTRY WinMain(HINSTANCE hInstance, HINSTANCE, LPSTR, int)
 #endif
 
 	float cltDist = 0.0f;
+
+	glm::vec4 clNorm;
 	
 	MazeUI::Window* debugWindow = new MazeUI::Window("Debug", 0.7f, 0.0f, 3.0f, 0.0f, ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoCollapse);
 	debugWindow->addNewItem(new MazeUI::StatText<float>(cltDist, "Estimated dist"));
+	debugWindow->addNewItem(new MazeUI::StatText<bool>(sliding, "sliding"));
+	debugWindow->addNewItem(new MazeUI::Text("Closest Normal:"));
+	debugWindow->addNewItem(new MazeUI::StatText<float>(clNorm.x, "x"));
+	debugWindow->addNewItem(new MazeUI::StatText<float>(clNorm.y, "y"));
+	debugWindow->addNewItem(new MazeUI::StatText<float>(clNorm.z, "z"));
 	
 	MazeUI::Window* fpsWindow = new MazeUI::Window("Fps", 0.0f, 0.0f, 0.0f, 0.0f, ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoTitleBar);
 	fpsWindow->addNewItem(new MazeUI::StatText<float>(fpsCounter.fps, "fps"));
@@ -245,22 +358,22 @@ int APIENTRY WinMain(HINSTANCE hInstance, HINSTANCE, LPSTR, int)
 #endif
 
 		cltDist =  closestDist(glm::vec4(drawer->getCameraPos(), 0.0f));
-
+		clNorm = closestNormal(glm::vec4(drawer->getCameraPos(), 0.0f));
 		if(lightRot){
 			glm::mat4 rotateMat = glm::rotate(glm::mat4(1.0f) , glm::radians( deltaTime * 10.0f), glm::vec3(1.0f, 0.0f, 0.0f));
 			drawer->uboVS.lightDirection = rotateMat * drawer->uboVS.lightDirection;
 		}
 		if(movingFwd)
-			drawer->moveCameraForward(howMuchCanGo(drawer->getCameraForwardDir(), glm::vec4(drawer->getCameraPos(), 0.0f),deltaTime * (super_sonic_boom ? 100.0f : 20.0f)));
+			drawer->moveCameraInDir(howMuchCanGo(drawer->getCameraForwardDir(), glm::vec4(drawer->getCameraPos(), 0.0f),deltaTime * (super_sonic_boom ? 100.0f : 20.0f)));
 			//drawer->moveCameraForward(deltaTime *(super_sonic_boom ? 100.0f : 20.0f));
 		if(movingBwd)
-			drawer->moveCameraBackward(howMuchCanGo(drawer->getCameraBackwardDir(), glm::vec4(drawer->getCameraPos(), 0.0f),deltaTime * (super_sonic_boom ? 100.0f : 20.0f)));
+			drawer->moveCameraInDir(howMuchCanGo(drawer->getCameraBackwardDir(), glm::vec4(drawer->getCameraPos(), 0.0f),deltaTime * (super_sonic_boom ? 100.0f : 20.0f)));
 			//drawer->moveCameraBackward(deltaTime *(super_sonic_boom ? 100.0f : 20.0f));
 		if(movingRgt)
-			drawer->moveCameraRight(howMuchCanGo(drawer->getCameraRightDir(), glm::vec4(drawer->getCameraPos(), 0.0f),deltaTime * (super_sonic_boom ? 100.0f : 20.0f)));
+			drawer->moveCameraInDir(howMuchCanGo(drawer->getCameraRightDir(), glm::vec4(drawer->getCameraPos(), 0.0f),deltaTime * (super_sonic_boom ? 100.0f : 20.0f)));
 			//drawer->moveCameraRight(deltaTime *(super_sonic_boom ? 100.0f : 20.0f));
 		if(movingLft)
-			drawer->moveCameraLeft(howMuchCanGo(drawer->getCameraLeftDir(), glm::vec4(drawer->getCameraPos(), 0.0f),deltaTime * (super_sonic_boom ? 100.0f : 20.0f)));
+			drawer->moveCameraInDir(howMuchCanGo(drawer->getCameraLeftDir(), glm::vec4(drawer->getCameraPos(), 0.0f),deltaTime * (super_sonic_boom ? 100.0f : 20.0f)));
 			//drawer->moveCameraLeft(deltaTime *(super_sonic_boom ? 100.0f : 20.0f));
 		if(tiltLft)
 			drawer->tiltCamera(-deltaTime * 60.0f);

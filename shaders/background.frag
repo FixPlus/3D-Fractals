@@ -65,7 +65,7 @@ vec4 closestNormal(vec4 pos){
 }
 
 */
-float spoungeUnit = 1.0f;
+float spoungeUnit = 10.0f;
 
 float roundUp(float f){
 	float ret = round(f);
@@ -100,7 +100,7 @@ float closestDist(vec4 pos){
 	float rank = 6;
 	for(int i = 0; i < rank; i++){
 		float curRank = rank - i;
-		float multiplier = pow(3, curRank - 1);
+		float multiplier = pow(3, curRank - 1) * spoungeUnit;
 		pos = planeMirror(pos, vec4(0.0f, 0.0f, 3.0f * multiplier, 0.0f), vec4(-1.0f, 0.0f, -1.0f, 0.0f));
 		pos = planeMirror(pos, vec4(0.0f, 0.0f, 0.0f, 0.0f), vec4(1.0f, 0.0f, -1.0f, 0.0f));
 		pos = planeMirror(pos, vec4(1.5f * multiplier, 0.0f, 0.0f, 0.0f), vec4(-1.0f, 0.0f, 0.0f, 0.0f));
@@ -124,7 +124,7 @@ vec4 closestNormal(vec4 pos){
 	float rank = 6;
 	for(int i = 0; i < rank; i++){
 		float curRank = rank - i;
-		float multiplier = pow(3, curRank - 1);
+		float multiplier = pow(3, curRank - 1) * spoungeUnit;
 		pos = planeMirror(pos, vec4(0.0f, 0.0f, 3.0f * multiplier, 0.0f), vec4(-1.0f, 0.0f, -1.0f, 0.0f));
 		pos = planeMirror(pos, vec4(0.0f, 0.0f, 0.0f, 0.0f), vec4(1.0f, 0.0f, -1.0f, 0.0f));
 		pos = planeMirror(pos, vec4(1.5f * multiplier, 0.0f, 0.0f, 0.0f), vec4(-1.0f, 0.0f, 0.0f, 0.0f));
@@ -212,7 +212,7 @@ void main(){
 		outFragColor = color + sunCol + glowCol * glowing;
 	}
 	else{
-
+		float periodic = pow(cos(length(curPos)), 2);
 		//ambient occlusion calculated from number of steps 
 		float occlusion = 1.0f - pow(2.715, -20.0f/float(n));
 
@@ -279,6 +279,10 @@ void main(){
 		//object also has a color that could be replaced by texture if needed
 
 		color = vec4(0.5f, 0.8f, 1.0f, 0.0f);
+
+		vec4 colInverted = vec4(1.0f) - color;
+
+		color = color * periodic + colInverted * (1.0f - periodic);
 
 		outFragColor = color * totalLight;
 	}

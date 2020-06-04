@@ -402,6 +402,7 @@ public:
 	void moveCameraRight(float distance);
 	void moveCameraUp(float distance);
 	void moveCameraDown(float distance);
+	void moveCameraInDir(glm::vec4 shift);
 
 	void tiltCamera(float angle);
 
