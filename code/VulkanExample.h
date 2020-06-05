@@ -54,6 +54,8 @@ public:
 		glm::vec4 viewRef1 = {0.0f, -1.0f, 0.0f, 0.0f};
 		glm::vec4 viewRef2 = {0.0f, 0.0f, 1.0f, 0.0f};
 		glm::vec4 lightDirection = glm::vec4(0.7f, 2.0f, 1.2f, 0.0f);
+		glm::vec4 params = glm::vec4(1.0);
+		float shadowOption = 0.0f;
 	} uboVS;
 
 	struct {
@@ -403,6 +405,7 @@ public:
 	void moveCameraUp(float distance);
 	void moveCameraDown(float distance);
 	void moveCameraInDir(glm::vec4 shift);
+	void toggleShadows();
 
 	void tiltCamera(float angle);
 
@@ -414,7 +417,9 @@ public:
 	glm::vec4 getCameraUpDir();
 	glm::vec4 getCameraDownDir();
 	glm::vec3 getCameraPos();
+	glm::mat4 getCameraRot();
 	void setCameraPos(glm::vec3 newPos);
+	void rotateCameraXY(float xAngle, float yAngle);
 	void mouseMoved(double x, double y, bool &handled);
 
 	virtual void viewChanged();

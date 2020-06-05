@@ -13,7 +13,8 @@ layout (binding = 0) uniform UBO
 	vec4 viewRef1;
 	vec4 viewRef2;
 	vec4 lightPos;
-
+	vec4 params;
+	float shadowOption; // < 0 == shadow off ; >= 0 == shadow on
 } ubo;
 
 layout (location = 0) in vec3 inUVW;
@@ -25,46 +26,15 @@ float epsilon = 0.01f; // distance epsilon vincinity
 float maxLength = 10000.0f;
 int maxSteps = 500;
 
-/*
+#define NUM_OF_MIRRORS 7
 
-//SPHERE ARRAY
+vec4 mirrorRoots[NUM_OF_MIRRORS]   =   {vec4(0.0f, 0.0f, 3.0f, 0.0f), vec4(0.0f), vec4(1.5f, 0.0f, 0.0f, 0.0f),
+										vec4(0.0f, 1.5f, 0.0f, 0.0f), vec4(2.0f, 1.0f, 0.0f, 0.0f), vec4(0.0f),
+										vec4(1.0f, 0.0f, 0.0f, 0.0f)};
+vec4 mirrorNormals[NUM_OF_MIRRORS] =   {vec4(-1.0f, 0.0f, -1.0f, 0.0f), vec4(1.0f, 0.0f, -1.0f, 0.0f), vec4(-1.0f, 0.0f, 0.0f, 0.0f),
+										vec4(0.0f, -1.0f, 0.0f, 0.0f), vec4(-1.0f, -1.0f, 0.0f, 0.0f), vec4(1.0f, -1.0f, 0.0f, 0.0f),
+										vec4(-1.0f, 0.0f, 0.0f, 0.0f)};
 
-float closestDist(vec4 pos){
-	vec4 sphereCenter = vec4(5.0f, 5.0f, 5.0f, 0.0f);
-	float radius = 1.0f;
-	if(pos.x < 0) pos.x = -pos.x;
-	if(pos.y < 0) pos.y = -pos.y;
-	if(pos.z < 0) pos.z = -pos.z;
-
-	pos.x = pos.x - int(pos.x / 10.0f) * 10.0f;
-	pos.y = pos.y - int(pos.y / 10.0f) * 10.0f;
-	pos.z = pos.z - int(pos.z / 10.0f) * 10.0f;
-
-	return length(sphereCenter - pos) - radius;
-}
-
-vec4 closestNormal(vec4 pos){
-	vec4 sphereCenter = vec4(5.0f, 5.0f, 5.0f, 0.0f);
-	float radius = 1.0f;
-	vec3 mult = vec3(1.0f, 1.0f, 1.0f);
-	if(pos.x < 0) {pos.x = -pos.x; mult.x = -1.0f;}
-	if(pos.y < 0) {pos.y = -pos.y; mult.y = -1.0f;}
-	if(pos.z < 0) {pos.z = -pos.z; mult.z = -1.0f;}
-
-	pos.x = pos.x - int(pos.x / 10.0f) * 10.0f;
-	pos.y = pos.y - int(pos.y / 10.0f) * 10.0f;
-	pos.z = pos.z - int(pos.z / 10.0f) * 10.0f;
-
-	vec4 ret = sphereCenter - pos;
-	ret = -normalize(ret);
-	ret.x *= mult.x;
-	ret.y *= mult.y;
-	ret.z *= mult.z;
-
-	return ret;
-}
-
-*/
 float spoungeUnit = 10.0f;
 
 float roundUp(float f){
@@ -82,6 +52,17 @@ float roundDown(float f){
 	return ret;
 }
 
+vec4 planeMirrorForced(vec4 point, vec4 planeRoot, vec4 planeNormal){
+	planeNormal = normalize(planeNormal);
+
+	vec4 div = point - planeRoot;
+	float normProj = dot(planeNormal, div);
+	point -= 2.0f * planeNormal *  normProj;
+
+	return point;
+}
+
+int flagMirror = 0;
 
 vec4 planeMirror(vec4 point, vec4 planeRoot, vec4 planeNormal){
 	planeNormal = normalize(planeNormal);
@@ -90,7 +71,10 @@ vec4 planeMirror(vec4 point, vec4 planeRoot, vec4 planeNormal){
 	float normProj = dot(planeNormal, div);
 	if(normProj < 0.0f){
 		point -= 2.0f * planeNormal *  normProj;
+		flagMirror = 1;
 	}
+	else
+		flagMirror = 0;
 
 	return point;
 }
@@ -101,13 +85,14 @@ float closestDist(vec4 pos){
 	for(int i = 0; i < rank; i++){
 		float curRank = rank - i;
 		float multiplier = pow(3, curRank - 1) * spoungeUnit;
-		pos = planeMirror(pos, vec4(0.0f, 0.0f, 3.0f * multiplier, 0.0f), vec4(-1.0f, 0.0f, -1.0f, 0.0f));
-		pos = planeMirror(pos, vec4(0.0f, 0.0f, 0.0f, 0.0f), vec4(1.0f, 0.0f, -1.0f, 0.0f));
-		pos = planeMirror(pos, vec4(1.5f * multiplier, 0.0f, 0.0f, 0.0f), vec4(-1.0f, 0.0f, 0.0f, 0.0f));
-		pos = planeMirror(pos, vec4(0.0f, 1.5f * multiplier, 0.0f, 0.0f), vec4(0.0f, -1.0f, 0.0f, 0.0f));
-		pos = planeMirror(pos, vec4(2.0f * multiplier, 1.0f * multiplier, 0.0f, 0.0f), vec4(-1.0f, -1.0f, 0.0f, 0.0f));
-		pos = planeMirror(pos, vec4(0.0f, 0.0f, 0.0f, 0.0f), vec4(1.0f, -1.0f, 0.0f, 0.0f));
-		pos = planeMirror(pos, vec4(1.0f * multiplier, 0.0f, 0.0f, 0.0f), vec4(-1.0f, 0.0f, 0.0f, 0.0f));
+		for(int j = 0; j < NUM_OF_MIRRORS; j++){
+			vec4 normal = mirrorNormals[j];
+			if(j == 5)
+				normal.x *= ubo.params.x;
+
+			pos = planeMirror(pos, mirrorRoots[j] * multiplier, normal);
+		}
+
 	}
 	float x = pos.x / spoungeUnit;
 	float y = pos.y / spoungeUnit;
@@ -119,19 +104,76 @@ float closestDist(vec4 pos){
 
 }
 
-vec4 closestNormal(vec4 pos){
-
+vec2 closestTextureCoord(vec4 pos){
 	float rank = 6;
 	for(int i = 0; i < rank; i++){
 		float curRank = rank - i;
 		float multiplier = pow(3, curRank - 1) * spoungeUnit;
-		pos = planeMirror(pos, vec4(0.0f, 0.0f, 3.0f * multiplier, 0.0f), vec4(-1.0f, 0.0f, -1.0f, 0.0f));
-		pos = planeMirror(pos, vec4(0.0f, 0.0f, 0.0f, 0.0f), vec4(1.0f, 0.0f, -1.0f, 0.0f));
-		pos = planeMirror(pos, vec4(1.5f * multiplier, 0.0f, 0.0f, 0.0f), vec4(-1.0f, 0.0f, 0.0f, 0.0f));
-		pos = planeMirror(pos, vec4(0.0f, 1.5f * multiplier, 0.0f, 0.0f), vec4(0.0f, -1.0f, 0.0f, 0.0f));
-		pos = planeMirror(pos, vec4(2.0f * multiplier, 1.0f * multiplier, 0.0f, 0.0f), vec4(-1.0f, -1.0f, 0.0f, 0.0f));
-		pos = planeMirror(pos, vec4(0.0f, 0.0f, 0.0f, 0.0f), vec4(1.0f, -1.0f, 0.0f, 0.0f));
-		pos = planeMirror(pos, vec4(1.0f * multiplier, 0.0f, 0.0f, 0.0f), vec4(-1.0f, 0.0f, 0.0f, 0.0f));
+		for(int j = 0; j < NUM_OF_MIRRORS; j++){
+			vec4 normal = mirrorNormals[j];
+			if(j == 5)
+				normal.x *= ubo.params.x;
+			
+			pos = planeMirror(pos, mirrorRoots[j] * multiplier, normal);
+		}
+		
+	}
+	float x = pos.x / spoungeUnit - 0.5f;
+	float y = pos.y / spoungeUnit - 0.5f;
+	float z = pos.z / spoungeUnit - 0.5f;
+	vec2 ret;
+	if(abs(x) >= abs(y) && abs(x) >= abs(z) ){
+
+		ret.x = y > 0.0f ? min(0.5f, y) : max(-0.5f, y);
+		ret.x += 0.5f;
+
+		ret.y = z > 0.0f ? min(0.5f, z) : max(-0.5f, z);
+		ret.y += 0.5f;
+
+	}
+	else
+		if(abs(y) >= abs(z)){
+			ret.x = x > 0.0f ? min(0.5f, x) : max(-0.5f, x);
+			ret.x += 0.5f;
+
+			ret.y = z > 0.0f ? min(0.5f, z) : max(-0.5f, z);
+			ret.y += 0.5f;
+
+		}
+		else{
+			ret.x = x > 0.0f ? min(0.5f, x) : max(-0.5f, x);
+			ret.x += 0.5f;
+
+			ret.y = y > 0.0f ? min(0.5f, y) : max(-0.5f, y);
+			ret.y += 0.5f;
+
+		}
+
+		return ret;
+
+}
+
+vec4 closestNormal(vec4 pos){
+
+	float rank = 6;
+	vec4 xAxis = vec4(1.0f, 0.0f, 0.0f, 0.0f);
+	vec4 yAxis = vec4(0.0f, 1.0f, 0.0f, 0.0f);
+	vec4 zAxis = vec4(0.0f, 0.0f, 1.0f, 0.0f);
+	vec4 nullVec = vec4(0.0f);
+	for(int i = 0; i < rank; i++){
+		float curRank = rank - i;
+		float multiplier = pow(3, curRank - 1) * spoungeUnit;
+		for(int j = 0; j < NUM_OF_MIRRORS; j++){
+			vec4 normal = mirrorNormals[j];
+			if(j == 5)
+				normal.x *= ubo.params.x;
+			pos = planeMirror(pos, mirrorRoots[j] * multiplier, normal);
+			if(flagMirror == 1){
+				xAxis = planeMirrorForced(xAxis, nullVec, normal);
+				yAxis = planeMirrorForced(yAxis, nullVec, normal);
+				zAxis = planeMirrorForced(zAxis, nullVec, normal);
+			}
+		}
 	}
 
 	float x = pos.x / spoungeUnit - 0.5f;
@@ -150,6 +192,11 @@ vec4 closestNormal(vec4 pos){
 			ret = vec4(0.0f, 0.0f, z > 0.0f ? 1.0f : -1.0f, 0.0f);
 
 		}
+	x = dot(xAxis, ret);
+	y = dot(yAxis, ret);
+	z = dot(zAxis, ret);
+
+	ret = vec4(x, y, z, 0.0f);
 
 	return ret;
 }
@@ -212,13 +259,15 @@ void main(){
 		outFragColor = color + sunCol + glowCol * glowing;
 	}
 	else{
-		float periodic = pow(cos(length(curPos)), 2);
 		//ambient occlusion calculated from number of steps 
 		float occlusion = 1.0f - pow(2.715, -20.0f/float(n));
 
+		//getting texture coordinates of the object point
+		vec2 texCoords = closestTextureCoord(curPos);
+
 		//enlighted calculated by the angle between surface normal and lightSource beam 
 		float normDot = dot(closestNormal(curPos), -normalize(ubo.lightPos));
-		float enlighted = 0.2f + (0.5f + 0.5f * normDot) * 0.6f;
+		float enlighted = normDot > 0.0f ? 0.5f + 0.3f * normDot : 0.5f + 0.1f * normDot;
 		
 
 		//	next step is to calculate dropped shadow
@@ -227,8 +276,8 @@ void main(){
 
 		// here we use prevPos variable to start our marching from the point where we still
 		// didnt hit epsilon treshhold
-
-		if(normDot > 0.0f && n < maxSteps){ // we only calculate it if there are no self-shadowing and object is normally lit
+		if(ubo.shadowOption >= 0.0f && normDot > 0.0f && n < maxSteps / 2.0f){ 
+		// we only calculate it if it is on, there are no self-shadowing and object is normally lit
 
 			curPos = prevPos;
 			
@@ -258,7 +307,7 @@ void main(){
 			}
 		}
 		else{
-			totalRayLength = 0.0f;
+			totalRayLength = maxLength * 1.1f;
 		}
 
 		// if we hit object on the way(rayLength < maxLength) - we apply a shadow
@@ -277,12 +326,11 @@ void main(){
 			totalLight *= shadow;
 
 		//object also has a color that could be replaced by texture if needed
+		//Now it is using previously calculated texture coordintes
 
-		color = vec4(0.5f, 0.8f, 1.0f, 0.0f);
-
-		vec4 colInverted = vec4(1.0f) - color;
-
-		color = color * periodic + colInverted * (1.0f - periodic);
+		//color = vec4(0.5f, 0.3f, 0.6f, 0.0f);
+		color = texture(samplerColor1, texCoords, 1.0f); 
+	
 
 		outFragColor = color * totalLight;
 	}

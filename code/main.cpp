@@ -23,11 +23,20 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 
 bool movingFwd = false, movingBwd = false, movingRgt = false, movingLft = false, tiltRgt = false, tiltLft = false;
 bool super_sonic_boom = false, lightRot = false;
-bool sliding = false;
+bool sliding = false, morphing = false;
 
 float epsilon = 0.01f;
 float spoungeUnit = 10.0f;
-float collisionRadius = 0.3f;
+float collisionRadius = 1.0f;
+
+enum{ NUM_OF_MIRRORS = 7 };
+
+glm::vec4 mirrorRoots[NUM_OF_MIRRORS]   =   {glm::vec4(0.0f, 0.0f, 3.0f, 0.0f), glm::vec4(0.0f), glm::vec4(1.5f, 0.0f, 0.0f, 0.0f),
+										glm::vec4(0.0f, 1.5f, 0.0f, 0.0f), glm::vec4(2.0f, 1.0f, 0.0f, 0.0f), glm::vec4(0.0f),
+										glm::vec4(1.0f, 0.0f, 0.0f, 0.0f)};
+glm::vec4 mirrorNormals[NUM_OF_MIRRORS] =   {glm::vec4(-1.0f, 0.0f, -1.0f, 0.0f), glm::vec4(1.0f, 0.0f, -1.0f, 0.0f), glm::vec4(-1.0f, 0.0f, 0.0f, 0.0f),
+										glm::vec4(0.0f, -1.0f, 0.0f, 0.0f), glm::vec4(-1.0f, -1.0f, 0.0f, 0.0f), glm::vec4(1.0f, -1.0f, 0.0f, 0.0f),
+										glm::vec4(-1.0f, 0.0f, 0.0f, 0.0f)};
 
 
 bool mirrorFlag = false;
@@ -56,20 +65,20 @@ glm::vec4 planeMirror(glm::vec4 point, glm::vec4 planeRoot, glm::vec4 planeNorma
 
 	return point;
 }
-
 float closestDist(glm::vec4 pos){
 
 	float rank = 6;
 	for(int i = 0; i < rank; i++){
 		float curRank = rank - i;
 		float multiplier = glm::pow(3, curRank - 1) * spoungeUnit;
-		pos = planeMirror(pos, glm::vec4(0.0f, 0.0f, 3.0f * multiplier, 0.0f), glm::vec4(-1.0f, 0.0f, -1.0f, 0.0f));
-		pos = planeMirror(pos, glm::vec4(0.0f, 0.0f, 0.0f, 0.0f), glm::vec4(1.0f, 0.0f, -1.0f, 0.0f));
-		pos = planeMirror(pos, glm::vec4(1.5f * multiplier, 0.0f, 0.0f, 0.0f), glm::vec4(-1.0f, 0.0f, 0.0f, 0.0f));
-		pos = planeMirror(pos, glm::vec4(0.0f, 1.5f * multiplier, 0.0f, 0.0f), glm::vec4(0.0f, -1.0f, 0.0f, 0.0f));
-		pos = planeMirror(pos, glm::vec4(2.0f * multiplier, 1.0f * multiplier, 0.0f, 0.0f), glm::vec4(-1.0f, -1.0f, 0.0f, 0.0f));
-		pos = planeMirror(pos, glm::vec4(0.0f, 0.0f, 0.0f, 0.0f), glm::vec4(1.0f, -1.0f, 0.0f, 0.0f));
-		pos = planeMirror(pos, glm::vec4(1.0f * multiplier, 0.0f, 0.0f, 0.0f), glm::vec4(-1.0f, 0.0f, 0.0f, 0.0f));
+		for(int j = 0; j < NUM_OF_MIRRORS; j++){
+			glm::vec4 normal = mirrorNormals[j];
+			if(j == 5)
+				normal.x *= drawer->uboVS.params.x;
+
+			pos = planeMirror(pos, mirrorRoots[j] * multiplier, normal);
+		}
+
 	}
 	float x = pos.x / spoungeUnit;
 	float y = pos.y / spoungeUnit;
@@ -84,51 +93,35 @@ float closestDist(glm::vec4 pos){
 glm::vec4 closestNormal(glm::vec4 pos){
 
 	float rank = 6;
-	std::list<glm::vec4> transforms;
+	glm::vec4 xAxis = glm::vec4(1.0f, 0.0f, 0.0f, 0.0f);
+	glm::vec4 yAxis = glm::vec4(0.0f, 1.0f, 0.0f, 0.0f);
+	glm::vec4 zAxis = glm::vec4(0.0f, 0.0f, 1.0f, 0.0f);
+	glm::vec4 nullVec = glm::vec4(0.0f);
 	for(int i = 0; i < rank; i++){
 		float curRank = rank - i;
 		float multiplier = glm::pow(3, curRank - 1) * spoungeUnit;
-		
-		pos = planeMirror(pos, glm::vec4(0.0f, 0.0f, 3.0f * multiplier, 0.0f), glm::vec4(-1.0f, 0.0f, -1.0f, 0.0f));
-		if(mirrorFlag)
-			transforms.push_back(glm::vec4(-1.0f, 0.0f, -1.0f, 0.0f));
-		
-		pos = planeMirror(pos, glm::vec4(0.0f, 0.0f, 0.0f, 0.0f), glm::vec4(1.0f, 0.0f, -1.0f, 0.0f));
-		if(mirrorFlag)
-			transforms.push_back(glm::vec4(1.0f, 0.0f, -1.0f, 0.0f));
-		
-		pos = planeMirror(pos, glm::vec4(1.5f * multiplier, 0.0f, 0.0f, 0.0f), glm::vec4(-1.0f, 0.0f, 0.0f, 0.0f));
-		if(mirrorFlag)
-			transforms.push_back(glm::vec4(-1.0f, 0.0f, 0.0f, 0.0f));
-		
-		pos = planeMirror(pos, glm::vec4(0.0f, 1.5f * multiplier, 0.0f, 0.0f), glm::vec4(0.0f, -1.0f, 0.0f, 0.0f));
-		if(mirrorFlag)
-			transforms.push_back(glm::vec4(0.0f, -1.0f, 0.0f, 0.0f));
-		
-		pos = planeMirror(pos, glm::vec4(2.0f * multiplier, 1.0f * multiplier, 0.0f, 0.0f), glm::vec4(-1.0f, -1.0f, 0.0f, 0.0f));
-		if(mirrorFlag)
-			transforms.push_back(glm::vec4(-1.0f, -1.0f, 0.0f, 0.0f));
-		
-		pos = planeMirror(pos, glm::vec4(0.0f, 0.0f, 0.0f, 0.0f), glm::vec4(1.0f, -1.0f, 0.0f, 0.0f));
-		if(mirrorFlag)
-			transforms.push_back(glm::vec4(1.0f, -1.0f, 0.0f, 0.0f));
-		
-		pos = planeMirror(pos, glm::vec4(1.0f * multiplier, 0.0f, 0.0f, 0.0f), glm::vec4(-1.0f, 0.0f, 0.0f, 0.0f));
-		if(mirrorFlag)
-			transforms.push_back(glm::vec4(-1.0f, 0.0f, 0.0f, 0.0f));
+		for(int j = 0; j < NUM_OF_MIRRORS; j++){
+			glm::vec4 normal = mirrorNormals[j];
+			if(j == 5)
+				normal.x *= drawer->uboVS.params.x;
+			pos = planeMirror(pos, mirrorRoots[j] * multiplier, normal);
+			if(mirrorFlag == 1){
+				xAxis = planeMirrorForced(xAxis, nullVec, normal);
+				yAxis = planeMirrorForced(yAxis, nullVec, normal);
+				zAxis = planeMirrorForced(zAxis, nullVec, normal);
+			}
+		}
 	}
 
 	float x = pos.x / spoungeUnit - 0.5f;
 	float y = pos.y / spoungeUnit - 0.5f;
 	float z = pos.z / spoungeUnit - 0.5f;
-	
 	glm::vec4 ret;
-	
-	if(abs(x) >= glm::abs(y) && glm::abs(x) >= glm::abs(z) ){
+	if(glm::abs(x) >= glm::abs(y) && glm::abs(x) >= glm::abs(z) ){
 		ret = glm::vec4(x > 0.0f ? 1.0f : -1.0f, 0.0f, 0.0f, 0.0f);
 	}
 	else
-		if(abs(y) >= abs(z)){
+		if(glm::abs(y) >= glm::abs(z)){
 			ret = glm::vec4(0.0f, y > 0.0f ? 1.0f : -1.0f, 0.0f, 0.0f);
 
 		}
@@ -136,15 +129,12 @@ glm::vec4 closestNormal(glm::vec4 pos){
 			ret = glm::vec4(0.0f, 0.0f, z > 0.0f ? 1.0f : -1.0f, 0.0f);
 
 		}
+	x = glm::dot(xAxis, ret);
+	y = glm::dot(yAxis, ret);
+	z = glm::dot(zAxis, ret);
 
+	ret = glm::vec4(x, y, z, 0.0f);
 
-	while(!transforms.empty()){
-		glm::vec4 planeNorm = transforms.back();
-		transforms.pop_back();
-		ret = planeMirrorForced(ret, glm::vec4(0.0f, 0.0f, 0.0f, 0.0f), -planeNorm);
-	}
-
-	ret = glm::normalize(ret);
 	return ret;
 }
 
@@ -285,12 +275,27 @@ int APIENTRY WinMain(HINSTANCE hInstance, HINSTANCE, LPSTR, int)
 					lightRot = !lightRot;
 					break;
 				}
+				case KEY_R:{
+					drawer->toggleShadows();
+					break;
+				}
+				case KEY_F:{
+					morphing = !morphing;
+					//std::cout << drawer->uboVS.params.x << std::endl;
+					break;
+				}
+				case KEY_B:{
+					//std::cout << drawer->uboVS.params.x << std::endl;
+					break;
+				}
 				case KEY_SHIFT:{
 					super_sonic_boom = true;
 					break;					
 				}
 			}
 		}
+
+
 		if(msg.type == UserInputMessage::Type::UIM_KEYUP){
 			switch(msg.detail){
 				case KEY_W:{
@@ -346,6 +351,7 @@ int APIENTRY WinMain(HINSTANCE hInstance, HINSTANCE, LPSTR, int)
 	MazeUI::manager.addNewElement(debugWindow);
 	MazeUI::manager.addNewElement(fpsWindow);
 	float deltaTime = 0.0f;
+	float overallTime = 0.0f;
 	drawer->updateOverlay();
 	drawer->setCameraPos({-1.0f, -1.0f, -1.0f});
 	while(!drawer->shouldQuit()){
@@ -356,7 +362,10 @@ int APIENTRY WinMain(HINSTANCE hInstance, HINSTANCE, LPSTR, int)
 #if defined(VK_USE_PLATFORM_XCB_KHR)
 		drawer->handleEvents(); // LISTENING TO USER INPUT
 #endif
-
+		if(morphing){
+			overallTime += deltaTime;
+			drawer->uboVS.params.x = 1.0f + glm::sin(overallTime / 10.0f);
+		}
 		cltDist =  closestDist(glm::vec4(drawer->getCameraPos(), 0.0f));
 		clNorm = closestNormal(glm::vec4(drawer->getCameraPos(), 0.0f));
 		if(lightRot){
@@ -364,16 +373,16 @@ int APIENTRY WinMain(HINSTANCE hInstance, HINSTANCE, LPSTR, int)
 			drawer->uboVS.lightDirection = rotateMat * drawer->uboVS.lightDirection;
 		}
 		if(movingFwd)
-			drawer->moveCameraInDir(howMuchCanGo(drawer->getCameraForwardDir(), glm::vec4(drawer->getCameraPos(), 0.0f),deltaTime * (super_sonic_boom ? 100.0f : 20.0f)));
+			drawer->moveCameraInDir(howMuchCanGo(drawer->getCameraForwardDir(), glm::vec4(drawer->getCameraPos(), 0.0f),deltaTime * (super_sonic_boom ? 1000.0f : 50.0f)));
 			//drawer->moveCameraForward(deltaTime *(super_sonic_boom ? 100.0f : 20.0f));
 		if(movingBwd)
-			drawer->moveCameraInDir(howMuchCanGo(drawer->getCameraBackwardDir(), glm::vec4(drawer->getCameraPos(), 0.0f),deltaTime * (super_sonic_boom ? 100.0f : 20.0f)));
+			drawer->moveCameraInDir(howMuchCanGo(drawer->getCameraBackwardDir(), glm::vec4(drawer->getCameraPos(), 0.0f),deltaTime * (super_sonic_boom ? 1000.0f : 50.0f)));
 			//drawer->moveCameraBackward(deltaTime *(super_sonic_boom ? 100.0f : 20.0f));
 		if(movingRgt)
-			drawer->moveCameraInDir(howMuchCanGo(drawer->getCameraRightDir(), glm::vec4(drawer->getCameraPos(), 0.0f),deltaTime * (super_sonic_boom ? 100.0f : 20.0f)));
+			drawer->moveCameraInDir(howMuchCanGo(drawer->getCameraRightDir(), glm::vec4(drawer->getCameraPos(), 0.0f),deltaTime * (super_sonic_boom ? 1000.0f : 50.0f)));
 			//drawer->moveCameraRight(deltaTime *(super_sonic_boom ? 100.0f : 20.0f));
 		if(movingLft)
-			drawer->moveCameraInDir(howMuchCanGo(drawer->getCameraLeftDir(), glm::vec4(drawer->getCameraPos(), 0.0f),deltaTime * (super_sonic_boom ? 100.0f : 20.0f)));
+			drawer->moveCameraInDir(howMuchCanGo(drawer->getCameraLeftDir(), glm::vec4(drawer->getCameraPos(), 0.0f),deltaTime * (super_sonic_boom ? 1000.0f : 50.0f)));
 			//drawer->moveCameraLeft(deltaTime *(super_sonic_boom ? 100.0f : 20.0f));
 		if(tiltLft)
 			drawer->tiltCamera(-deltaTime * 60.0f);
@@ -400,6 +409,7 @@ int APIENTRY WinMain(HINSTANCE hInstance, HINSTANCE, LPSTR, int)
 		tDiff = std::chrono::duration<double, std::milli>(tEnd - tStart).count();
 		
 		deltaTime = tDiff / 1000.0f; // time of current cycle turn in seconds
+		
 		fpsCounter.addFrame(deltaTime);
 	}
 
